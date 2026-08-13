@@ -1,75 +1,89 @@
-# RFC Summary — LIMS Digital Laboratory Workflow and Data Architecture
-
-## Context
-
-The laboratory originally relied on paper logs and Google Sheets for field and laboratory data entry. These methods required manual validation and created opportunities for typographical errors, incorrect row placement, inconsistent data entry, and duplicated records.
-
-The laboratory already had established scientific procedures, naming conventions, and sample-identification rules. The software therefore needed to improve data entry without requiring researchers to replace the underlying laboratory workflow.
+# Engineering RFC — LIMS Reliability and Public Evidence Slice
 
 ## Decision
 
-Design a custom digital workflow with separate field and laboratory interfaces, backed by a nested Firebase/Firestore data model that follows the laboratory's existing site, visit, sample, and experiment relationships.
+Keep the existing application architecture and build a **public-safe verification slice** around it instead of rewriting the LIMS or publishing production research data.
+
+## Goals
+
+- demonstrate software-enforced workflow and validation rules;
+- prove representative correctness with automated tests;
+- demonstrate access control and dependency-failure behavior;
+- preserve confidentiality of production data and credentials;
+- make the strongest SWE claims independently understandable.
+
+## Non-Goals
+
+- migrating the application to a new framework;
+- replacing Firebase solely for portfolio value;
+- publishing production data or private source;
+- reconstructing the retired 95% validation-improvement claim;
+- adding unrelated cloud/Kubernetes infrastructure.
+
+## Current Architecture
+
+```text
+Android field client ─┐
+                      ├── Firebase-backed research data
+PyQt desktop client ──┘
+          │
+          └── CSV export for downstream analysis
+```
+
+Application-side workflow and validation logic sits between user input and database writes.
 
 ## Alternatives Considered
 
-### Continue using paper logs and Google Sheets
+### A. Rewrite as a public web application
 
-Advantages:
+**Advantage:** easy to demo and host.
 
-- already familiar to researchers;
-- little additional software maintenance.
+**Rejected for now:** high effort, creates a second codebase, and does not prove the original production system is reliable.
 
-Disadvantages:
+### B. Publish the production repository
 
-- manual validation;
-- inconsistent entry;
-- additional transcription work;
-- limited enforcement of workflow rules.
+**Advantage:** strongest source-code transparency.
 
-### Build a relational SQL-centered system
+**Rejected:** confidentiality and credential/data risk are more important than portfolio convenience.
 
-Advantages:
+### C. Build synthetic public evidence around the existing system — chosen
 
-- explicit schemas and relationships;
-- strong support for structured analytical queries.
+**Advantages:**
 
-Disadvantages:
+- directly validates the architecture already used;
+- small, reviewable scope;
+- safe for research privacy;
+- produces tests that improve the real engineering floor.
 
-- additional schema and infrastructure complexity for the application;
+## Verification Slice
 
-### Custom application with Firebase-backed nested records
+Use a synthetic data fixture with a small number of sites, visits, physical samples, and experiment records.
 
-Advantages:
+Required tests:
 
-- matches the existing hierarchical workflow;
-- straightforward application integration;
-- supports validation before writes;
-- allows field and laboratory workflows to share a central data source.
+1. required field missing → reject;
+2. value outside an allowed scientific range → reject;
+3. invalid GPS/naming convention → reject;
+4. duplicate logical record → reject/no duplicate write;
+5. legal workflow transition → allow;
+6. illegal transition → reject;
+7. unauthorized user/action → reject;
+8. Firebase/network write failure → no false success or partial state.
 
-Disadvantages:
+## Success Criteria
 
-- application becomes dependent on Firebase;
-- nested records require careful documentation;
-- confidential research data limits public reproducibility.
+The slice is considered complete when:
 
-## Rationale
+- tests run without production data;
+- at least one intentional bug causes the suite to fail;
+- a clean test environment can reproduce the results;
+- no secrets or confidential research records are required;
+- a short demo can show one valid path and one rejected path.
 
-The custom application approach was selected because it allowed the laboratory to preserve its existing scientific procedures and identification conventions while improving consistency through standardized forms and built-in validation.
+## Risks
 
-Separate field and laboratory workflows reduced the number of irrelevant inputs shown during each stage of the research process.
+- synthetic fixtures can diverge from real workflow rules;
+- mocks can hide actual Firebase behavior;
+- single-developer ownership can bias test selection.
 
-## Trade-offs
-
-The system improves data consistency but requires continued software maintenance and workflow confirmation as laboratory procedures evolve.
-
-Firebase reduces infrastructure overhead but creates a central external dependency and requires careful management of credentials and confidential data.
-
-## Evidence
-
-- desktop application;
-- Android field application;
-- validation logic;
-- sanitized workflow screenshots;
-- conceptual data model;
-- synthetic validation examples;
-- CSV export workflow.
+Mitigation: use production-derived rules without production data, include at least one integration-level check where safe, and seek supervisor/technical review of factual claims.

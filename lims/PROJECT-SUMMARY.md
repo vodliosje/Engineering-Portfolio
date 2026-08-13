@@ -1,211 +1,177 @@
-# Project Summary
+# Freshwater Sponge Laboratory Information Management System (LIMS)
 
 ## 1. Problem
 
-Before the application was introduced, laboratory data was primarily recorded through paper logs and Google Sheets. This workflow created several risks, including lost records, transcription errors, inconsistent formatting, and manual validation overhead.
+The environmental research workflow relied heavily on paper logs and spreadsheets for field and laboratory data entry. That created recurring risks: transcription mistakes, inconsistent formatting, records entered under the wrong category or sequence, duplicate entries, and repeated manual validation.
 
-Common errors included typographical mistakes, entering values in the wrong row, and recording data under the wrong category or sequence.
+I developed a custom information-management application to standardize those workflows and validate records before database writes while preserving the laboratory's existing sample-identification conventions.
 
-To reduce these problems, I developed a custom application that provides a standardized interface across researchers and performs validation before records are written to the database.
+## 2. Users and Context
 
-## 2. Users / Context
+The system supports a research group of approximately 10–15 faculty, staff, near-peer mentors, and undergraduate researchers.
 
-The system was developed for a research laboratory of approximately 10–15 faculty, staff, near-peer mentors, and undergraduate researchers.
+Two interfaces serve different operating contexts:
 
-The desktop application is used during laboratory experiments to record and review results. A separate Android application supports field data collection when researchers are working away from laboratory computers.
+- a Python/PyQt desktop application for laboratory entry, review, and export;
+- an Android application for field collection away from laboratory computers.
 
-Paper logs are still maintained as a backup and reference source.
+Paper records remain a backup and research reference rather than being fully eliminated.
 
 ## 3. What I Built
 
-Based on existing paper forms and requirements provided by the research team, I designed and developed a Python desktop application for laboratory data entry and management.
+I designed and implemented the software around the laboratory's existing forms and research procedures.
 
-The first version was built with Tkinter. As the interface and workflow became more complex, I migrated the desktop application to PyQt to improve maintainability and support the required user interface more effectively.
+The system includes:
 
-I also developed an Android application for field data collection.
-
-Laboratory records are stored in Firebase using a nested NoSQL/JSON-style data structure. The system includes validation before database writes and supports one-click CSV exports for downstream analysis, presentations, and preparation of research materials.
+- Python desktop application, migrated from Tkinter to PyQt as the interface grew;
+- Android field-data interface;
+- Firebase-backed NoSQL persistence;
+- workflow-specific data-entry screens;
+- validation before writes;
+- duplicate-record checks;
+- record viewing and selection;
+- one-click CSV export for downstream analysis and reporting.
 
 ## 4. My Ownership
 
-The laboratory supervisors defined the application requirements and existing research procedures, while I was responsible for designing and implementing the software architecture.
+Laboratory supervisors defined research procedures and application requirements. I owned the software architecture and primary implementation, including:
 
-My responsibilities included:
+- desktop framework selection and migration;
+- Firebase integration and application-side data architecture;
+- desktop and Android implementation;
+- field and laboratory workflows;
+- validation logic;
+- database reads/writes;
+- CSV export functionality.
 
-- selecting and implementing the desktop framework;
-- designing the Firebase-backed data architecture;
-- developing the desktop and Android applications;
-- implementing field and laboratory workflows;
-- implementing data-entry validation;
-- implementing database read/write logic;
-- implementing CSV export functionality.
+The site's naming and identification conventions came from the laboratory. My engineering responsibility was to encode those conventions into software without forcing researchers to adopt a different scientific workflow.
 
-The data model was designed around the laboratory's existing naming and identification conventions so that the software could integrate with established research procedures without requiring researchers to adopt a completely new system.
+## 5. Data Model and Scale
 
-Validation rules were derived from existing laboratory procedures and observed data-entry problems. Examples include numeric precision requirements, valid scientific ranges, GPS constraints, naming conventions, and duplicate-record checks.
-
-## 5. Architecture / Data Flow
-
-### Field Pipeline
-
-```text
-User Input
-    ↓
-GPS / Naming / Logic Validation
-    ↓
-Record Creation Using Existing Lab Format
-    ↓
-Firebase
-```
-
-### Laboratory Pipeline
-
-```text
-Firebase
-    ↓
-Select Existing Record
-    ↓
-+-----------------------------+
-| Identity Results            |
-| Water Experiment Results    |
-| Sediment Results            |
-| DNA Results                 |
-+-----------------------------+
-    ↓
-Validation
-    ↓
-Firebase
-```
-
-### Export Pipeline
-
-```text
-Firebase
-    ↓
-User Selects Export Options
-    ↓
-Filtering / Transformation
-    ↓
-CSV File
-```
-
-### Workflow Logic
-
-```text
-Field Record
-    ↓
-New Sample
-    ↓
-Sponge Collected?
-    ├── Yes → Identity Test
-    │          └── Unable to Identify → DNA Test
-    │
-    ├── Water Collected? → Water Experiment
-    │
-    └── Sediment Collected? → Sediment Experiment
-```
-
-### Conceptual Data Model
-
-The following diagram represents the logical relationship between sites, visits, samples, and experiment results. It is intended to explain the application's data model conceptually and does not necessarily reproduce the exact Firebase document/path structure.
+The conceptual hierarchy is:
 
 ```text
 Site
 └── Visit
-    └── Sample
-        ├── Basic Information
-        ├── Water
-        │   └── Experiment Results
-        ├── Sediment
-        │   └── Experiment Results
-        ├── Identity
-        │   └── Identification Results
-        └── DNA
-            └── Experiment Results
+    └── Physical Sample
+        ├── Basic / field information
+        ├── Water records
+        ├── Sediment records
+        ├── Identity records
+        └── DNA records
 ```
 
-This hierarchy reflects how related environmental and laboratory records are grouped around each physical sample while preserving the laboratory's existing site, visit, and sample identification conventions.
+The system contains data associated with more than **1,200 physical samples**. A physical sample can produce multiple experiment or identification records, so those samples correspond to more than **4,000 associated laboratory records** across water, sediment, identity, and DNA workflows.
 
-## 6. Key Technical Decisions
+This distinction matters: a sample is a physical/research entity, while a record is one piece of data associated with that sample.
 
-### Firebase
+## 6. Data Flow
 
-Firebase was selected because it provided a managed database service with straightforward Python integration and a usage-based pricing model suitable for a research project with limited infrastructure requirements.
-
-### Desktop and Android Applications
-
-Separate desktop and Android interfaces were used because laboratory and field workflows have different constraints.
-
-The desktop application supports detailed laboratory data entry and review, while the Android application supports data collection during field work where access to a laboratory computer may not be practical.
-
-The application is not exposed as a public web application, which also helps limit unnecessary exposure of confidential research data.
-
-### NoSQL Data Model
-
-A nested NoSQL structure was selected because the laboratory data naturally follows a hierarchy of:
+### Field workflow
 
 ```text
-site → visit → sample → experiment results
+User input
+  ↓
+GPS / naming / logic validation
+  ↓
+Record creation using existing lab conventions
+  ↓
+Firebase
 ```
 
-This structure allowed related water, sediment, identity, and DNA records to remain associated with the same sample.
+### Laboratory workflow
 
-### Field and Laboratory Modes
+```text
+Existing sample
+  ↓
+Select laboratory workflow
+  ├── Identity
+  ├── Water
+  ├── Sediment
+  └── DNA
+  ↓
+Validation
+  ↓
+Firebase
+```
 
-Field and laboratory workflows were separated to reduce accidental data entry into the wrong sections and to present researchers only with the inputs relevant to their current task.
+### Export workflow
 
-### Most Difficult Design Decision
+```text
+Firebase
+  ↓
+User selects export scope
+  ↓
+Filtering / transformation
+  ↓
+CSV output
+```
 
-One of the most difficult decisions was designing an interface that matched the laboratory's existing data-entry procedures closely enough to reduce training and transition costs while still improving validation and consistency.
+## 7. Key Engineering Decisions
 
-## 7. Validation / Reliability
+### Preserve the laboratory's workflow instead of redesigning the science
 
-The application performs validation before new data is written to Firebase.
+The highest-risk product decision was not database selection; it was fitting software around an established research process. A technically cleaner interface that changed identifiers or sequence rules would have increased training cost and adoption risk.
 
-Representative validation rules include:
+The application therefore preserves existing conventions while adding validation and more consistent data entry.
 
-- formatting selected numeric measurements to two decimal places;
-- checking scientific values against expected ranges for specific experiments;
-- validating GPS coordinates against expected geographic constraints;
-- checking sample and site naming against the laboratory's existing identification system;
-- preventing duplicate record creation;
-- checking required fields before submission.
+### Separate field and laboratory interfaces
 
-When an existing record is detected, the application prevents accidental duplicate creation and requires the researcher to use the appropriate existing record or subsequent workflow.
+Field collection and laboratory analysis have different interaction constraints. The Android interface supports field entry, while the desktop application supports denser laboratory workflows and review/export tasks.
 
-## 8. Results / Scale
+### Use managed Firebase persistence
 
-The laboratory system contains data associated with more than **1,200 physical samples** collected across multiple sites and visits.
+Firebase reduced infrastructure overhead for a small research project and supported the required application integrations. The trade-off is that application-side validation, authorization, failure behavior, and data-access rules must be tested deliberately rather than assumed.
 
-Because each sample can contain multiple experiment and identification records, the application has processed more than **4,000 nested laboratory records** across water, sediment, DNA, and identity workflows.
+### Use a hierarchical NoSQL representation
 
-The application reduced dependence on manual spreadsheet entry by providing standardized digital forms and automated validation.
+The research data naturally groups around site → visit → sample → experiment records. A nested representation keeps related experiment outputs associated with the physical sample while matching the laboratory's existing conventions.
 
-Paper records continue to be used as a backup and research reference rather than being completely replaced.
+## 8. Validation and Correctness
 
-The application also supports one-click CSV exports for downstream analysis and reporting.
+Current validation includes representative rules such as:
 
-The exact record counts are available internally but are not publicly disclosed because the underlying research data is confidential.
+- required-field checks;
+- numeric formatting/precision requirements;
+- expected scientific ranges;
+- geographic/GPS constraints;
+- sample/site naming conventions;
+- duplicate-record checks.
 
-## 9. Limitations
+When an existing logical record is detected, the application prevents accidental duplicate creation and directs the researcher to the appropriate existing or subsequent workflow.
 
-Current limitations include:
+The next evidence milestone is to convert representative rules into automated tests using synthetic fixtures so correctness can be demonstrated publicly without exposing research data.
 
-- significant development time is required to confirm and encode the workflow for each type of laboratory experiment;
-- the software was primarily developed and maintained by one developer, creating a maintenance and review bottleneck;
-- laboratory data and most raw screenshots cannot be published because the research data is confidential;
-- paper records are still maintained as a parallel backup system;
-- broader automated testing and reproducibility evidence are still being developed.
+## 9. Privacy and Security Boundary
 
-## 10. Evidence
+The production source and research data are not published because they may contain confidential laboratory information, credentials, identifiers, locations, or experiment data.
 
-Public or sanitized evidence planned for this project includes:
+Public evidence must therefore use:
 
-- sanitized desktop application screenshots;
-- sanitized Android application screenshots;
-- architecture diagram;
-- synthetic validation examples;
 - synthetic sample records;
-- representative workflow diagrams;
-- CSV export example using non-sensitive data;
-- validation test cases using synthetic fixtures.
+- sanitized screenshots;
+- conceptual architecture;
+- non-sensitive workflow examples;
+- test accounts or mocks where appropriate.
+
+No real credentials, service-account files, private database contents, or sensitive laboratory exports should be included in this portfolio.
+
+## 10. Current Limitations
+
+- automated test coverage is still being expanded;
+- dependency-failure behavior is not yet publicly demonstrated;
+- authorization/security-rule behavior needs reproducible tests;
+- the project has primarily been maintained by one developer, increasing review and maintenance risk;
+- source-level public review is constrained by research confidentiality.
+
+## 11. Strongest Evidence to Build Next
+
+1. Synthetic fixture covering site, visit, sample, and multiple experiment records.
+2. Automated required-field, range, GPS, naming, and duplicate tests.
+3. Legal/illegal workflow-transition tests.
+4. Authorization test with permitted and denied roles/accounts.
+5. Firebase unavailable/failed-write test.
+6. Synthetic CSV export demonstration.
+7. Supervisor factual confirmation of role, user scope, and conservative scale claims if available.
+
+See [evidence-links.md](./evidence-links.md) for the current verification index.

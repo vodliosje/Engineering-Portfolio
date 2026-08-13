@@ -1,232 +1,152 @@
-# PlantSight — Project Summary
+# PlantSight — Sustainability Hackathon Web Application
 
 ## 1. Problem
 
-PlantSight was developed during GeauxHack at Louisiana State University under the theme **“Nature & Touching Grass.”**
+PlantSight was developed by a three-person team during GeauxHack at Louisiana State University under the theme **“Nature & Touching Grass.”**
 
-The project focused on encouraging students and young adults who live and study around university campuses to pay more attention to green spaces and plant life around them.
+The project explored a lightweight campus competition designed to encourage students to notice and interact with green spaces. Residence halls could accumulate scores based on plant ratings and user participation.
 
-The team designed a campus-based competition in which residence halls could be compared through plant ratings and accumulated scores. The goal was to turn interaction with campus green spaces into a lightweight social and competitive experience.
+## 2. Prototype Scope
 
-## 2. Users / Context
+The completed hackathon prototype included:
 
-The target users were university students living or studying around campus.
+- user accounts and login;
+- residence-hall visualization using Google Maps;
+- plant information for more than 100 species;
+- 1–5 plant ratings;
+- residence-hall score updates;
+- image uploads and associated information;
+- social-style user-generated content.
 
-The prototype allowed users to:
+OpenWeather and Perenual were considered during design but were **not implemented in the completed hackathon prototype**.
 
-- create and access user accounts;
-- view participating residence halls on a map;
-- view plants associated with residence halls;
-- rate plants from 1 to 5;
-- update residence-hall scores based on submitted ratings;
-- upload images and associated information;
-- compare participating residence halls through accumulated scores.
+## 3. Technology
 
-The project was developed as a team hackathon prototype rather than a production application.
+- JavaScript web application;
+- Firebase for authentication/data/storage-related application functionality;
+- Google Maps for campus visualization.
 
-## 3. What We Built
-
-PlantSight was built as a web application using JavaScript, Firebase, and Google Maps.
-
-The application combined three main ideas:
-
-1. **Campus visualization** — Google Maps was used to display participating residence halls.
-2. **Plant rating and competition** — users could rate plants associated with a residence hall, contributing to that hall's score.
-3. **User-generated content** — users could upload images and information associated with plants, residence halls, and user accounts.
-
-Firebase served as the application's central backend for user information, plant information, uploaded content, and residence-hall scores.
-
-OpenWeather and Perenual were considered as planned integrations during the project design but were not implemented in the completed hackathon prototype.
+Source repository: https://github.com/vodliosje/VieGanG-geaux
 
 ## 4. My Ownership
 
-PlantSight was a team project, so ownership is divided between individual implementation work and shared design decisions.
+Because this was a team project, ownership is separated explicitly.
 
 ### I directly implemented
 
 - Firebase integration across the application;
-- user authentication and login functionality;
-- the plant rating workflow;
-- score calculation and score updates for residence halls;
-- logic for displaying plants for users to rate;
-- portions of the Google Maps integration.
+- user authentication/login functionality;
+- plant-rating workflow;
+- residence-hall score calculation and updates;
+- logic for displaying plants for rating;
+- portions of Google Maps integration.
 
-### Shared with teammates
+### Shared design/implementation
 
-- overall application concept;
-- campus competition concept;
-- Google Maps functionality;
-- general user-interface design.
+- overall concept;
+- campus competition design;
+- portions of Google Maps functionality;
+- general UI decisions.
 
 ### Teammate contributions
 
-My teammates contributed to areas including:
+Teammates contributed to areas including:
 
-- portions of the Google Maps implementation;
-- image-upload functionality;
-- social-media-style interactions;
-- UI development;
-- hackathon presentation and project communication.
+- portions of Google Maps implementation;
+- image upload;
+- social-style interactions;
+- UI implementation;
+- presentation/demo work.
 
-The idea of using competition to encourage student participation was developed as a team. My primary contribution to that concept was implementing the underlying rating and scoring workflow.
+The competition concept was collaborative. My main implementation contribution to that concept was the rating/scoring and Firebase-backed workflow.
 
-## 5. Architecture / Data Flow
-
-### High-Level Architecture
+## 5. Architecture
 
 ```text
-Browser Application
-        ↓
-     Firebase
-   ↙    ↓     ↘
-Users  Plants  Hall Scores
-        ↓
- Google Maps / UI
+Browser application
+      │
+      ├── Authentication ── Firebase
+      │
+      ├── Rating / score logic ── Firebase data
+      │
+      ├── User-generated content ── Firebase data/storage
+      │
+      └── Campus visualization ── Google Maps
 ```
 
-Firebase acts as the central application data layer, while Google Maps provides a visualization layer for participating residence halls.
-
-### Rating Workflow
+### Rating flow
 
 ```text
-User
+Authenticated user
   ↓
-Select Residence Hall / Plant
+Select hall / plant
   ↓
-View Plant
+Choose rating (1–5)
   ↓
-Choose Rating (1–5)
+Rating logic
   ↓
-Rating Logic
-  ↓
-Update Residence-Hall Score
+Update residence-hall score
   ↓
 Firebase
   ↓
-Updated Score Display
+Updated score displayed
 ```
 
-The score represents an aggregate value associated with the participating residence hall.
+## 6. Key Engineering Decisions
 
-### Image Upload Workflow
+### Firebase for hackathon velocity
 
-```text
-User
-  ↓
-Choose Image
-  ↓
-Add Associated Information
-  ↓
-Residence Hall / User / Plant Metadata
-  ↓
-Firebase Storage / Database
-  ↓
-Application Display
-```
+A managed backend let the team implement authentication and shared application state without spending the short hackathon window building and deploying a custom server.
 
-This is a **conceptual architecture** intended to explain the major application relationships rather than reproduce the exact Firebase database paths.
+The trade-off is that Firebase becomes a central dependency and requires deliberate authorization, data-integrity, and failure-state handling.
 
-## 6. Key Technical Decisions
+### Google Maps as a presentation layer
 
-### Firebase
+The map communicates campus location and participating residence halls, but the core score data is logically separate from the map. This separation is useful for graceful degradation: a map failure should not corrupt rating data.
 
-Firebase was selected because the team needed a backend that could be integrated quickly during a hackathon without building and deploying a separate server infrastructure.
+### Prioritize working vertical slices over UI polish
 
-It provided accessible libraries for storing application data and managing user-related functionality while allowing the team to focus on building the prototype.
+The hackathon constraint favored authentication, data integration, mapping, rating, scoring, and content upload over production-level styling, testing, or reliability engineering.
 
-### Google Maps
+## 7. Reliability and Security Gaps
 
-Google Maps was selected to provide a familiar geographic interface for showing participating residence halls across campus.
+The original prototype was manually tested during hackathon development, but it does not yet have a strong automated reliability floor.
 
-The map was primarily a visualization layer. Core score calculation was not dependent on the map itself, so rating data could still exist independently of the map display.
+Important gaps include:
 
-### Rating System
+- incomplete automated rating/input validation;
+- incomplete authorization/security-rule testing;
+- Firebase as a central dependency with limited fallback behavior;
+- limited handling when Google Maps fails;
+- potential concurrent score-update/lost-update behavior that needs testing;
+- public client/API configuration that should be reviewed for appropriate restrictions.
 
-A 1-to-5 rating system was chosen because it provided a simple interaction that users could understand immediately during a short hackathon demo.
+These are useful hardening targets because they turn a hackathon prototype into evidence of production-aware SWE judgment without rewriting the application.
 
-Ratings were used to contribute to residence-hall scores, supporting the project's competitive concept.
+## 8. Results and Limitations
 
-### Hackathon Trade-Off
+The team completed and demonstrated a working prototype during the hackathon. The project did not produce a defensible long-term user-impact metric because it was not deployed to a sustained user population.
 
-The largest trade-off was **UI/UX versus functionality**.
+The project should therefore be positioned around:
 
-Because development time was limited, the team prioritized implementing the application's core workflows—authentication, Firebase integration, mapping, rating, scoring, and content upload—over fully polishing the user interface and interaction design.
+- full-stack integration under time constraints;
+- team collaboration;
+- clearly separated individual ownership;
+- authentication and shared state;
+- future hardening of validation, security, concurrency, and failure behavior.
 
-## 7. Reliability / Failure Behavior
+It should **not** be positioned as a production-scale application or as having implemented OpenWeather/Perenual during the hackathon.
 
-The prototype currently has limited formal reliability handling.
+## 9. Strongest Evidence to Build Next
 
-### Google Maps Failure
+1. Clean clone/install/run path.
+2. Authentication logged-in/logged-out/error tests.
+3. Rating boundary and score-calculation tests.
+4. Concurrent two-user score-update test.
+5. Firebase failed-write/unavailable test.
+6. Google Maps unavailable/error-state test.
+7. Firebase authorization/security-rule tests.
+8. Teammate factual confirmation of individual ownership.
+9. One small reviewed hardening change if feasible.
 
-If Google Maps fails to load, the map visualization is unavailable. However, the underlying rating and score data remains stored separately in Firebase.
-
-### Firebase Failure
-
-Firebase is a central dependency of the application. If Firebase is unavailable, most application functionality involving authentication, ratings, scores, and stored content becomes unavailable.
-
-### Current Gaps
-
-The hackathon prototype does not currently include:
-
-- formal fallback behavior for Firebase outages;
-- validation preventing all invalid rating or post submissions;
-- a complete authorization model for determining which users are qualified to submit ratings;
-- comprehensive Firebase Security Rules;
-- automated dependency-failure tests.
-
-Functional workflows were manually tested during development, but formal reliability testing and failure-injection testing were not part of the hackathon implementation.
-
-## 8. Results / Project Scope
-
-The team completed a working prototype containing the majority of the core concept, including:
-
-- login functionality;
-- Firebase-backed application data;
-- Google Maps visualization;
-- plant rating;
-- residence-hall score updates;
-- image uploads;
-- user-generated content.
-
-The application was demonstrated during the hackathon and received feedback during the judging/demo process.
-
-The project did not produce a meaningful quantitative impact metric because it was developed as a short-duration hackathon prototype rather than deployed to a sustained user population.
-
-The project includes information for more than **100 plant species**, although the original plan to supplement this information using external plant and weather APIs was not completed during the hackathon.
-
-## 9. Limitations
-
-Current limitations include:
-
-- the rating workflow and interface require additional refinement;
-- the application does not yet have a complete mechanism for determining which users are authorized to submit ratings;
-- Google Maps has limited fallback behavior if the API is unavailable;
-- Firebase represents a central application dependency;
-- formal validation and security rules require additional work;
-- the UI/UX remains at hackathon-prototype quality;
-- OpenWeather integration was planned but not implemented;
-- Perenual API integration was planned but not implemented;
-- the project has not been deployed long enough to produce meaningful user-engagement or sustainability impact metrics.
-
-## 10. Evidence
-
-Available or planned evidence includes:
-
-- public source-code repository;
-- Google Maps implementation;
-- Firebase integration code;
-- authentication/login code;
-- rating and score-calculation logic;
-- sanitized screenshots;
-- hackathon demo material;
-- plant dataset containing 100+ species;
-- team ownership table;
-- conceptual architecture diagram.
-
-Future evidence improvements include:
-
-- a formal dependency/failure matrix;
-- validation tests;
-- security-rule documentation;
-- sanitized Firebase data examples;
-- clearer documentation of individual versus team ownership.
+See [evidence-links.md](./evidence-links.md) for the verification index.

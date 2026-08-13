@@ -1,77 +1,60 @@
-# RFC Summary — PlantSight Backend and Campus Visualization Architecture
-
-## Context
-
-PlantSight was developed during a short hackathon under the theme “Nature & Touching Grass.”
-
-The team needed to implement user accounts, plant ratings, residence-hall scores, uploaded content, and campus visualization within a limited development window.
+# Engineering RFC — PlantSight Hardening Without a Rewrite
 
 ## Decision
 
-Use Firebase as the application's central data/backend service and Google Maps as a separate visualization layer for participating residence halls.
+Keep PlantSight as a hackathon project and add a **small reliability/security hardening slice**. Do not rebuild it into a new production application solely for portfolio purposes.
 
-The rating and scoring workflow remains centered on Firebase rather than depending directly on the map.
+## Goals
 
-## Alternatives Considered
+- prove the rating/scoring logic is correct;
+- test authorization boundaries;
+- expose concurrent-update behavior;
+- handle Firebase and Google Maps failures visibly;
+- make setup reproducible;
+- preserve clear individual/team ownership.
 
-### Build a custom backend and database
+## Non-Goals
 
-Advantages:
+- redesigning the entire UI;
+- implementing every planned API;
+- claiming production scale;
+- rewriting Firebase into a custom backend;
+- retroactively presenting OpenWeather/Perenual as hackathon features.
 
-- greater control over APIs and data behavior;
-- easier to customize server-side logic.
+## Highest-Risk Technical Slice
 
-Disadvantages:
+The residence-hall score is shared mutable state. The most valuable reliability question is whether two users rating at nearly the same time can create a lost update or inconsistent aggregate.
 
-- substantially more infrastructure and deployment work;
-- higher implementation cost during a hackathon.
+Test this before adding new features.
 
-### Store state only in the browser
+## Required Tests
 
-Advantages:
+1. rating below 1 → reject;
+2. rating above 5 → reject;
+3. valid rating → accepted and score changes as expected;
+4. known fixture ratings → expected aggregate score;
+5. unauthenticated write → reject where auth is required;
+6. user A cannot modify protected user B data where ownership rules apply;
+7. two near-simultaneous score updates → no lost update;
+8. Firebase write failure → UI does not report false success;
+9. Maps unavailable → explicit fallback/error state rather than unexplained blank behavior.
 
-- very fast prototype development.
+## Security Decision
 
-Disadvantages:
+Review Firebase Security Rules and any public client/API configuration. Public browser configuration is not automatically a secret, but unrestricted credentials or overly broad database rules create risk.
 
-- no shared state between users;
-- no persistent competition scores;
-- unsuitable for user-generated content.
+Expected controls:
 
-### Firebase + Google Maps
+- minimum required read/write permissions;
+- validation at the data-rule boundary where feasible;
+- origin/API restrictions for map credentials where applicable;
+- no private service credentials committed to the repository.
 
-Advantages:
+## Success Criteria
 
-- rapid integration;
-- centralized application data;
-- supports authentication, scores, plants, and uploaded content;
-- Google Maps provides a familiar campus visualization.
-
-Disadvantages:
-
-- Firebase becomes a critical dependency;
-- limited fallback behavior;
-- security and validation require additional work beyond the hackathon prototype.
-
-## Rationale
-
-The architecture prioritized delivering a functional multi-user prototype within the hackathon time constraint.
-
-Firebase reduced the need to design and deploy a separate backend, while Google Maps provided geographic context without becoming part of the application's core score-calculation logic.
-
-## Trade-offs
-
-This choice accelerated development but left several production concerns unresolved, including stronger validation, authorization, security rules, and dependency-failure handling.
-
-The team also prioritized core functionality over UI/UX polish.
-
-## Evidence
-
-- Firebase integration;
-- authentication implementation;
-- plant-rating workflow;
-- residence-hall score calculation;
-- Google Maps integration;
-- image-upload flow;
-- source repository;
-- demo screenshots.
+- a clean environment can start the application;
+- rating/auth tests run automatically;
+- concurrent-update behavior is known and fixed if necessary;
+- failed writes are visible and do not create false-success UI state;
+- source contains no private credentials;
+- ownership remains explicit in public documentation.
